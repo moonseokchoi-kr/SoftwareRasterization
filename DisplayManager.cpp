@@ -73,7 +73,7 @@ bool DisplayManager::startSDL()
 
 bool DisplayManager::createWindow()
 {
-	mWindow = SDL_CreateWindow("Software Renderer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, 0);
+	mWindow = SDL_CreateWindow("Software Rasterization", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, 0);
 	if (mWindow == nullptr)
 	{
 		printf("Could not create Window: %s\n", SDL_GetError());
