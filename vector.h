@@ -3,24 +3,7 @@
 #include <cmath>
 #pragma once
 
-template<class T> struct Vec2 
-{
-	union 
-	{
-		struct{T u, v;};
-		struct { T x, y; };
-		T raw[2];
-	};
-	Vec2() :u(0), v(0) {};
-	Vec2(T _u, T _v) :u(_u), v(_v) {};
-	inline Vec2<T> operator +(const Vec2<T> &V) const { return Vec2<T>(u + V.u, v + V.v); }
-	inline Vec2<T> operator -(const Vec2<T> &V) const { return Vec2<T>(u - V.u, v - V.v); }
-	inline Vec2<T> operator *(float f ) const { return Vec2<T>(u*f, v*f); }
-	inline T operator * (const Vec2<T> &V)const { return (u*V.u + v * V.v); }
-	Vec2<T> cross(const Vec2<T> &V0, const Vec2<T> &V1) const { return Vec2<T>(0, V0.u*V1.v - V0.v*V1.u); }
-
-};
-
+//만약 2차 벡터가 필요하면 z를 0으로 설정하고 사용
 template<class T> struct Vec3
 {
 	union 
@@ -40,8 +23,6 @@ template<class T> struct Vec3
 	Vec3<T> cross(const Vec3<T> &V0, const Vec3<T> &V1) const { return Vec3<T>(V0.y*V1.z-V0.z*V1.y, V0.x*V1.z-V0.z*V1.x, V0.x*V1.y - V1.x*V0.y); }
 };
 
-typedef Vec2<float> Vec2f;
-typedef Vec2<int> Vec2i;
 typedef Vec3<float> Vec3f;
 typedef Vec3<int> Vec3i;
 
