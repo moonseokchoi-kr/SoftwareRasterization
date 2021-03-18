@@ -1,53 +1,47 @@
 #include <iostream>
 #include <SDL.h>
-#include "vector.h"
-void drawLine(Vec3f &vertex1, Vec3f &vertex2, Uint32* pixels);
-void drawWireframe(Vec3f &vertex1, Vec3f& vertex2, Vec3f& vertex3, Uint32* pixel);
+#include <algorithm>
+#include "ObjParser.h"
+#include "buffer.h"
+void drawLine(int x0, int x1, int y0, int y1, Uint32 color, Buffer<Uint32> *pixels);
+void drawWireframe(Mesh& mesh, Uint32 color, Buffer<Uint32> *pixels);
+static const int WIDTH = 800;
+static const int HEIGHT = 800;
+SDL_PixelFormat* mappingFormat(SDL_AllocFormat(SDL_PIXELFORMAT_RGB888));
+Uint32 black = SDL_MapRGBA(mappingFormat, 0x00, 0x00, 0x00,0xFF);
+Uint32 white = SDL_MapRGBA(mappingFormat, 0xff, 0xff, 0xff, 0xff);
 int main(int argc, char ** argv)
 {
-	bool leftMouseButtonDown = false;
 	bool quit = false;
 	SDL_Event event;
-
 	SDL_Init(SDL_INIT_VIDEO);
 
 	SDL_Window * window = SDL_CreateWindow("SoftWare Renderer",
-		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, 0);
+		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, 0);
 
 	SDL_Renderer * renderer = SDL_CreateRenderer(window, -1, 0);
 	SDL_Texture * texture = SDL_CreateTexture(renderer,
-		SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, 640, 480);
-	Uint32 * pixels = new Uint32[640 * 480];
+		SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_STATIC, WIDTH, HEIGHT);
+	
+	Buffer<Uint32> *pixels = new Buffer<Uint32>(WIDTH, HEIGHT, new Uint32[WIDTH * HEIGHT]);
 
-	memset(pixels, 255, 640 * 480 * sizeof(Uint32));
-
+	Mesh mesh;
+	std::string  filename = "./testfile/african_head.obj";
+	mesh = OBJ::buildMeshFromFile(mesh, filename);
 	while (!quit)
 	{
-		SDL_UpdateTexture(texture, NULL, pixels, 640 * sizeof(Uint32));
+		SDL_UpdateTexture(texture, NULL, pixels, pixels->mPitch);
 
 		SDL_WaitEvent(&event);
-
+		
 		switch (event.type)
 		{
 		case SDL_QUIT:
 			quit = true;
 			break;
-		case SDL_MOUSEBUTTONUP:
-			if (event.button.button == SDL_BUTTON_LEFT)
-				leftMouseButtonDown = false;
-			break;
-		case SDL_MOUSEBUTTONDOWN:
-			if (event.button.button == SDL_BUTTON_LEFT)
-				leftMouseButtonDown = true;
-		case SDL_MOUSEMOTION:
-			if (leftMouseButtonDown)
-			{
-				int mouseX = event.motion.x;
-				int mouseY = event.motion.y;
-				pixels[mouseY * 640 + mouseX] = 0;
-			}
-			break;
 		}
+		
+		drawWireframe(mesh, white, pixels);
 
 		SDL_RenderClear(renderer);
 		SDL_RenderCopy(renderer, texture, NULL, NULL);
@@ -64,7 +58,7 @@ int main(int argc, char ** argv)
 	return 0;
 }
 
-void drawLine(int x0, int x1, int y0, int y1, Uint32 * pixels)
+void drawLine(int x0, int x1, int y0, int y1, Uint32 color, Buffer<Uint32> *pixels)
 {
 	//Bresenham의 선그리기 알고리즘
 	bool steep = false;
@@ -84,10 +78,10 @@ void drawLine(int x0, int x1, int y0, int y1, Uint32 * pixels)
 	int y = y0;
 	for (int x = x0; x <= x1; x++) {
 		if (steep) {
-			pixels[x * 640 + y] = 0;
+			(*pixels)(y, x) = color;
 		}
 		else {
-			pixels[y * 640 + x] = 0;
+			(*pixels)(x, y) = color;
 		}
 		error2 += derror2;
 		if (error2 > dx) {
@@ -97,9 +91,24 @@ void drawLine(int x0, int x1, int y0, int y1, Uint32 * pixels)
 	}
 
 
+
 }
 
-void drawWireframe(Vec3f* vertices, Uint32 * pixel)
+void drawWireframe(Mesh& mesh, Uint32 color, Buffer<Uint32> *pixels)
 {
-	
+	for (int i = 0; i < mesh.vertexIndices.size(); i++)
+	{
+		Vec3i face = mesh.vertexIndices[i];
+		for (int j = 0; j < 3; j++)
+		{
+			Vec3f v0 = mesh.verts_[face.raw[j]];
+			Vec3f v1 = mesh.verts_[face.raw[(j+1)%3]];
+
+			int x0 = (v0.x + 1.) * WIDTH / 2;
+			int x1 = (v1.x + 1.) * WIDTH / 2;
+			int y0 = (-v0.y + 1.) * HEIGHT / 2;
+			int y1 = (-v1.y + 1.) * HEIGHT / 2;
+			drawLine(x0, y0, x1, y1, color, pixels);
+		}
+	}
 }
