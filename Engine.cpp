@@ -26,6 +26,7 @@ bool Engine::ShutDown()
 
 void Engine::Run()
 {
+
 	while (true)
 	{
 		gDisplayManger.Display();

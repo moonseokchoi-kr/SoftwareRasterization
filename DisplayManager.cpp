@@ -54,6 +54,8 @@ void DisplayManager::Display()
 	//Fill the surface white
 	SDL_FillRect(mSurface, NULL, SDL_MapRGB(mSurface->format, 0xFF, 0xFF, 0xFF));
 
+	
+
 	//Update the surface
 	SDL_UpdateWindowSurface(mWindow);
 

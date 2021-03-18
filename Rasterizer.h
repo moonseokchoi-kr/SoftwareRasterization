@@ -13,7 +13,6 @@ public:
 	static void drawTri(Vec3f* vertices, Buffer<Uint32> *pixelShader, Buffer<float> *zBuffer);
 private:
 	Rasterizer() {};
-	Rasterizer() = delete;
 
 	static const Uint32 PIXEL_FORMAT = SDL_PIXELFORMAT_RGB888;
 	static const SDL_PixelFormat* mappingFormat;

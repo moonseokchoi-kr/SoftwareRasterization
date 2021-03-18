@@ -12,7 +12,7 @@ template<class T> struct Vec3
 		struct { T ivert, iuv, inorm; };
 		T raw[3];
 	};
-	Vec3() : x(0).y(0).z(0) {};
+	Vec3() : x(0),y(0),z(0) {};
 	Vec3(T _x, T _y, T _z) : x(_x), y(_y), z(_z) {};
 	inline Vec3<T> operator +(const Vec3<T> &V) const { return Vec3<T>(x + V.x, y + V.y, z+V.z); }
 	inline Vec3<T> operator -(const Vec3<T> &V) const { return Vec3<T>(x - V.x, y - V.y, z-V.z); }

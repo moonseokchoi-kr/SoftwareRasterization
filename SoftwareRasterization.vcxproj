@@ -147,12 +147,14 @@
     <ClCompile Include="DisplayManager.cpp" />
     <ClCompile Include="Engine.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="ObjParser.cpp" />
     <ClCompile Include="Rasterizer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="buffer.h" />
     <ClInclude Include="DisplayManager.h" />
     <ClInclude Include="Engine.h" />
+    <ClInclude Include="ObjParser.h" />
     <ClInclude Include="Rasterizer.h" />
     <ClInclude Include="vector.h" />
   </ItemGroup>
