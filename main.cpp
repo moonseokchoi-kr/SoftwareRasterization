@@ -10,6 +10,7 @@ static const int HEIGHT = 800;
 SDL_PixelFormat* mappingFormat(SDL_AllocFormat(SDL_PIXELFORMAT_RGB888));
 Uint32 black = SDL_MapRGBA(mappingFormat, 0x00, 0x00, 0x00,0xFF);
 Uint32 white = SDL_MapRGBA(mappingFormat, 0xff, 0xff, 0xff, 0xff);
+
 int main(int argc, char ** argv)
 {
 	bool quit = false;
@@ -19,9 +20,7 @@ int main(int argc, char ** argv)
 	SDL_Window * window = SDL_CreateWindow("SoftWare Renderer",
 		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, 0);
 
-	SDL_Renderer * renderer = SDL_CreateRenderer(window, -1, 0);
-	SDL_Texture * texture = SDL_CreateTexture(renderer,
-		SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_STATIC, WIDTH, HEIGHT);
+	SDL_Surface * surface = SDL_GetWindowSurface(window);
 	
 	Buffer<Uint32> *pixels = new Buffer<Uint32>(WIDTH, HEIGHT, new Uint32[WIDTH * HEIGHT]);
 
@@ -30,7 +29,8 @@ int main(int argc, char ** argv)
 	mesh = OBJ::buildMeshFromFile(mesh, filename);
 	while (!quit)
 	{
-		SDL_UpdateTexture(texture, NULL, pixels, pixels->mPitch);
+		//Fill the surface white
+		SDL_FillRect(surface, NULL, SDL_MapRGB(surface->format, 0x00, 0x00, 0x00));
 
 		SDL_WaitEvent(&event);
 		
@@ -43,14 +43,18 @@ int main(int argc, char ** argv)
 		
 		drawWireframe(mesh, white, pixels);
 
-		SDL_RenderClear(renderer);
-		SDL_RenderCopy(renderer, texture, NULL, NULL);
-		SDL_RenderPresent(renderer);
+		//Allows surface editing
+		SDL_LockSurface(surface);
+
+		//픽셀버퍼를 surface 로 복사
+		memcpy(surface->pixels, pixels->buffer, pixels->mHeight*pixels->mWidth);
+		SDL_UnlockSurface(surface);
+
+		//Update the surface
+		SDL_UpdateWindowSurface(window);
 	}
 
 	delete[] pixels;
-	SDL_DestroyTexture(texture);
-	SDL_DestroyRenderer(renderer);
 
 	SDL_DestroyWindow(window);
 	SDL_Quit();
