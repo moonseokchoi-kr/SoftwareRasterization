@@ -26,7 +26,7 @@ struct Buffer
 		return buffer[x + y * mWidth];
 	}
 
-	Buffer(int w, int h, T*array) : mWidth(w), mHeight(h), mPixelCount(w* h), mPitch(w * sizeof(T)), buffer(array){}
+	Buffer(int w, int h, T*array) : mWidth(w), mHeight(h), mPixelCount(w* h), mPitch(w * sizeof(T)),buffer(array){}
 
 	~Buffer() { delete [] buffer; }
 

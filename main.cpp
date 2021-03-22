@@ -12,6 +12,7 @@ static const int HEIGHT = 800;
 SDL_PixelFormat* mappingFormat(SDL_AllocFormat(SDL_PIXELFORMAT_RGB888));
 Uint32 black = SDL_MapRGBA(mappingFormat, 0x00, 0x00, 0x00,0xFF);
 Uint32 white = SDL_MapRGBA(mappingFormat, 0xff, 0xff, 0xff, 0xff);
+Uint32 red = SDL_MapRGBA(mappingFormat, 0xff, 0x00, 0x00, 0xff);
 
 //void drawLine(int x0, int x1, int y0, int y1, TGAColor color, TGAImage &image);
 //void drawWireframe(Mesh&mesh, TGAColor color, TGAImage &image);
@@ -28,16 +29,16 @@ int main(int argc, char ** argv)
 		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, 0);
 
 	SDL_Surface * surface = SDL_GetWindowSurface(window);
-	Buffer<Uint32> *pixels = new Buffer<Uint32>(WIDTH, HEIGHT, new Uint32[WIDTH * HEIGHT]);
-
+	Buffer<Uint32> *pixels = new Buffer<Uint32>(WIDTH, HEIGHT, new Uint32[WIDTH * HEIGHT*4]);
+	pixels->clear();
 	Mesh mesh;
 	std::string  filename = "./testfile/african_head.obj";
 	mesh = OBJ::buildMeshFromFile(mesh, filename);
+	//Fill the surface black
+	SDL_FillRect(surface, NULL, SDL_MapRGB(surface->format, 0xFF, 0xFF, 0xFF));
 	while (!quit)
 	{
-		//Fill the surface white
-		//SDL_FillRect(surface, NULL, SDL_MapRGBA(surface->format, 0x00, 0x00, 0x00, 0xFF));
-
+		
 		SDL_WaitEvent(&event);
 		
 		switch (event.type)
@@ -49,10 +50,10 @@ int main(int argc, char ** argv)
 		//Allows surface editing
 		SDL_LockSurface(surface);
 
-		drawWireframe(mesh, white, pixels);
+		drawWireframe(mesh, red, pixels);
 
 		//픽셀버퍼를 surface 로 복사
-		memcpy(surface->pixels, pixels->buffer, pixels->mWidth*pixels->mHeight);
+		memcpy(surface->pixels, pixels->buffer, pixels->mHeight*pixels->mWidth*4);
 		SDL_UnlockSurface(surface);
 
 		//Update the surface
@@ -113,8 +114,6 @@ void drawLine(int x0, int x1, int y0, int y1, Uint32 color, Buffer<Uint32> *pixe
 			error2 -= dx * 2;
 		}
 	}
-
-
 
 }
 
