@@ -52,7 +52,7 @@ int main(int argc, char ** argv)
 
 		drawWireframe(mesh, red, pixels);
 
-		//픽셀버퍼를 surface 로 복사
+		//픽셀버퍼를 surface 로 복사 4를 곱하는 이유는 픽셀버퍼는 색상포맷의 영향을 받음
 		memcpy(surface->pixels, pixels->buffer, pixels->mHeight*pixels->mWidth*4);
 		SDL_UnlockSurface(surface);
 
@@ -136,3 +136,6 @@ void drawWireframe(Mesh& mesh, Uint32 color, Buffer<Uint32> *pixels)
 		}
 	}
 }
+
+
+void drawTriangle(Vec3f *vertcies, Uint32 color, Buffer<Uint32> *pixels);
