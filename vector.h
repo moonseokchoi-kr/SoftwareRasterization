@@ -20,7 +20,7 @@ template<class T> struct Vec3
 	inline T operator *(const Vec3<T> &v) const { return x * v.x + y * v.y + z * v.z; };
 	float norm() const { return std::sqrt(x*x + y * y + z * z); }
 	Vec3<T>& normalize(T l = 1) { *this = (*this)*(1 / norm()); return *this; }
-	Vec3<T> cross(const Vec3<T> &V0, const Vec3<T> &V1) const { return Vec3<T>(V0.y*V1.z-V0.z*V1.y, V0.x*V1.z-V0.z*V1.x, V0.x*V1.y - V1.x*V0.y); }
+	Vec3<T> cross(const Vec3<T> &V0, const Vec3<T> &V1) const { return Vec3<T>(V0.y*V1.z-V0.z*V1.y, V0.z*V1.x-V0.x*V1.z, V0.x*V1.y - V1.x*V0.y); }
 };
 
 typedef Vec3<float> Vec3f;
