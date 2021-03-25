@@ -8,13 +8,16 @@
 //#include "lib/tgaimage.h"
 void drawLine(int x0, int x1, int y0, int y1, Uint32 color, Buffer<Uint32> *pixels);
 void drawWireframe(Mesh& mesh, Uint32 color, Buffer<Uint32> *pixels);
-void triangle(Vec3f *vertices , Uint32 color, Buffer<Uint32> *pixels);
+void triangle(Vec3f *vertices , Uint32 color, Buffer<Uint32> *pixels, Buffer<float> *zBuffer);
 void triBoundBox(int &maxX, int &maxY, int &minX, int &minY, Vec3f *vertices, Buffer<Uint32> *pixels);
 int edge(const Vec3f& a, const Vec3f& b, const Vec3f& c);
-void rasterize(Mesh& mesh, Uint32 color, Buffer<Uint32> *pixels);
+void rasterize(Mesh& mesh, Uint32 color, Buffer<Uint32> *pixels, Buffer<float> *zBuffer);
+bool backFaceCulling(Vec3f *wordCoords, Vec3f &v);
+
+Vec3f world2Screen(Vec3f v);
 static const int WIDTH = 800;
 static const int HEIGHT = 800;
-const Vec3f light_dir = Vec3f(-1, 0, 0);
+Vec3f light_dir = Vec3f(-1, 0, 0);
 SDL_PixelFormat* mappingFormat(SDL_AllocFormat(SDL_PIXELFORMAT_RGB888));
 Uint32 black = SDL_MapRGBA(mappingFormat, 0x00, 0x00, 0x00,0xFF);
 Uint32 white = SDL_MapRGBA(mappingFormat, 0xff, 0xff, 0xff, 0xff);
@@ -36,6 +39,7 @@ int main(int argc, char ** argv)
 
 	SDL_Surface * surface = SDL_GetWindowSurface(window);
 	Buffer<Uint32> *pixels = new Buffer<Uint32>(WIDTH, HEIGHT, new Uint32[WIDTH * HEIGHT*4]);
+	Buffer<float> *zBuffer = new Buffer<float>(WIDTH, HEIGHT, new float[WIDTH*HEIGHT]);
 	pixels->clear();
 	Mesh mesh;
 	std::string  filename = "./testfile/african_head.obj";
@@ -56,7 +60,7 @@ int main(int argc, char ** argv)
 		//Allows surface editing
 		SDL_LockSurface(surface);
 
-		rasterize(mesh, white, pixels);
+		rasterize(mesh, white, pixels, zBuffer);
 
 		//drawWireframe(mesh, red, pixels);
 		//픽셀버퍼를 surface 로 복사 4를 곱하는 이유는 픽셀버퍼는 색상포맷의 영향을 받음
@@ -123,26 +127,16 @@ void drawLine(int x0, int x1, int y0, int y1, Uint32 color, Buffer<Uint32> *pixe
 	}
 
 }
-void rasterize(Mesh& mesh, Uint32 color, Buffer<Uint32> *pixels)
+void rasterize(Mesh& mesh, Uint32 color, Buffer<Uint32> *pixels, Buffer<float> *zBuffer)
 {
 	
 	for (int i = 0; i < mesh.vertexIndices.size(); i++)
 	{
 		Vec3f screenCoords[3];
-		Vec3f worldCoords[3];
 		Vec3i face = mesh.vertexIndices[i];
-		for (int j = 0; j < 3; j++)
-		{
-			Vec3f world_coord = mesh.verts_[face.raw[j]];
-
-			screenCoords[j] = Vec3f((world_coord.x + 1.f)*WIDTH / 2.f, (-world_coord.y + 1.f)*HEIGHT / 2.f,0);
-			worldCoords[j] = world_coord;
-		}
-		Vec3f n;
-		n = n.cross(worldCoords[2] - worldCoords[0], worldCoords[1] - worldCoords[0]);
-		float intensity = n * light_dir;
-		if(intensity>0)
-			triangle(screenCoords, color, pixels);
+		Vec3f worldCoords[3];
+		for (int j = 0; j < 3; j++) { screenCoords[j] = world2Screen(mesh.verts_[face.raw[j]]); worldCoords[j] = mesh.verts_[face.raw[j]]; }
+		triangle(screenCoords, SDL_MapRGBA(mappingFormat, rand()/0xff, rand() / 0xff, rand() / 0xff, 0xff), pixels, zBuffer);
 	}
 }
 
@@ -165,48 +159,84 @@ void drawWireframe(Mesh& mesh, Uint32 color, Buffer<Uint32> *pixels)
 	}
 }
 
-void triangle(Vec3f *vertices, Uint32 color, Buffer<Uint32> *pixels)
+
+void triangle(Vec3f *vertices, Uint32 color, Buffer<Uint32> *pixels, Buffer<float> *zbuffer)
 {
 	//bounding box를 계산
 	int minX, minY, maxX, maxY;
 
 	triBoundBox(maxX, maxY, minX, minY,vertices,pixels);
+	
+	float area, depth;
+	area= edge(vertices[0], vertices[1], vertices[2]);
+	if (area <= 0);
+	area = 1 / area;
 
 	//Triangle setup
-	int A01 = vertices[0].y - vertices[1].y, B01 = vertices[1].x - vertices[0].x;
-	int A12 = vertices[0].y - vertices[2].y, B12 = vertices[2].x - vertices[1].x;
-	int A20 = vertices[0].y - vertices[2].y, B20 = vertices[2].x - vertices[0].x;
+	Vec3f zVals(vertices[0].z, vertices[1].z, vertices[2].z);
+	float A01 = vertices[0].y - vertices[1].y, B01 = vertices[1].x - vertices[0].x;
+	float A12 = vertices[1].y - vertices[2].y, B12 = vertices[2].x - vertices[1].x;
+	float A20 = vertices[2].y - vertices[0].y, B20 = vertices[0].x - vertices[2].x;
 
 	//무게중심좌표 최솟값에서 시작
 	Vec3f p(minX, minY, 0);
 
-	int w0_row = edge(vertices[1], vertices[2], p);
-	int w1_row = edge(vertices[2], vertices[0], p);
-	int w2_row = edge(vertices[0], vertices[1], p);
-	//Rasterize	
+	//선분의 벡터
+	Vec3f w, w_row;
 
+	w_row.x = edge(vertices[1], vertices[2], p);
+	w_row.y = edge(vertices[2], vertices[0], p);
+	w_row.z = edge(vertices[0], vertices[1], p);
+	
+	//Rasterize	
 	for (int y = minY; y <= maxY; y++)
 	{
-		int w0 = w0_row;
-		int w1 = w1_row;
-		int w2 = w2_row;
+		w.x = w_row.x;
+		w.y = w_row.y;
+		w.z = w_row.z;
 		for (int x = minX; x <= maxX; x++)
 		{
-			if (w0 >= 0 && w1 >= 0 && w2 >= 0)
-				(*pixels)(x, y) = color;
+			if (w.x >= 0 && w.y >= 0 && w.z >= 0) 
+			{
+				depth = (w*area)*(zVals);
+				if ((*zbuffer)(x, y) < depth && depth <= 1.0)
+				{
+					(*zbuffer)(x, y) = depth;
+
+					(*pixels)(x, y) = color;
+				}
+				
+			}
+
+				
 
 			//우측으로 한계단
-			w0 += A12;
-			w1 += A20;
-			w2 += A01;
+			w.x += A12;
+			w.y += A20;
+			w.z += A01;
 		}
 		//한 행 진행
-		w0_row += B12;
-		w1_row += B20;
-		w2_row += B01;
+		w_row.x += B12;
+		w_row.y += B20;
+		w_row.z += B01;
 
 	}
 }
+
+bool backFaceCulling(Vec3f *worldCoords, Vec3f &light)
+{
+	Vec3f n;
+	n.cross(worldCoords[2] - worldCoords[0], worldCoords[1] - worldCoords[0]);
+	n.normalize();
+	int intensity = n * light;
+	return intensity > 0;
+}
+//월드좌표->스크린
+Vec3f world2Screen(Vec3f v)
+{
+	return Vec3f(int((v.x + 1.f)*WIDTH / 2.f + .5f), int((-v.y + 1.f)*HEIGHT / 2.f + .5f), v.z);
+}
+
 //선분계산
 int edge(const Vec3f& a, const Vec3f& b, const Vec3f& c)
 {
