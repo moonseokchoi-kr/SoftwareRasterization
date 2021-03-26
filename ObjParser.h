@@ -14,7 +14,6 @@ public:
 	std::vector<Vec3i> vertexIndices;
 	std::vector<Vec3i> textureIndices;
 	std::vector<Vec3i> normalsIndices;
-	std::vector<std::vector<int>>faces_;
 };
 
 #include <fstream>

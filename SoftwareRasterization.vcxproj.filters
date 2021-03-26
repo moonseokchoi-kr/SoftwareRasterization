@@ -24,9 +24,6 @@
     <ClCompile Include="Engine.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="Rasterizer.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
     <ClCompile Include="ObjParser.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
@@ -45,9 +42,6 @@
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="vector.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Rasterizer.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="ObjParser.h">

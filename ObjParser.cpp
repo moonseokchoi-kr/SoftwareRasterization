@@ -31,7 +31,7 @@ bool OBJ::fileExist(std::string &filename)
 void OBJ::loadFileData(Mesh& mesh, std::ifstream &file)
 {
 	std::string line, key, x, y, z;
-	float tempU, tempV, intpart;
+	//float tempU, tempV, intpart;
 	Vec3i indices[3];
 	char delimeter = '/';
 
@@ -40,7 +40,6 @@ void OBJ::loadFileData(Mesh& mesh, std::ifstream &file)
 		std::getline(file, line);
 		std::istringstream iss(line);
 		iss >> key;
-		char trash;
 		if (key == "v")
 		{
 			iss >> x >> y >> z;
