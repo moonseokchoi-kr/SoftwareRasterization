@@ -2,16 +2,19 @@
 #include <SDL.h>
 #include <cmath>
 #include <algorithm>
+#include <limits>
 #include "ObjParser.h"
 #include "buffer.h"
-
-//#include "lib/tgaimage.h"
+#include "lib/tgaimage.h"
 void drawLine(int x0, int x1, int y0, int y1, Uint32 color, Buffer<Uint32> *pixels);
 void drawWireframe(Mesh& mesh, Uint32 color, Buffer<Uint32> *pixels);
 void triangle(Vec3f *vertices , Uint32 color, Buffer<Uint32> *pixels, Buffer<float> *zBuffer);
+void triangle(Vec3f *vertices, TGAColor color, TGAImage &image, Buffer<float> *zBuffer);
 void triBoundBox(int &maxX, int &maxY, int &minX, int &minY, Vec3f *vertices, Buffer<Uint32> *pixels);
+void triBoundBox(int &maxX, int &maxY, int &minY, int &minX, Vec3f *vertices, TGAImage &image);
 int edge(const Vec3f& a, const Vec3f& b, const Vec3f& c);
 void rasterize(Mesh& mesh, Uint32 color, Buffer<Uint32> *pixels, Buffer<float> *zBuffer);
+void rasterize(Mesh& mesh, TGAColor color, TGAImage &image, Buffer<float> *zBuffer);
 bool backFaceCulling(Vec3f *wordCoords, Vec3f &v, float& intensity);
 
 Vec3f world2Screen(Vec3f v);
@@ -43,8 +46,11 @@ int main(int argc, char ** argv)
 	pixels->clear();
 	//zBuffer->clear();
 	Mesh mesh;
+	TGAImage image(WIDTH,HEIGHT,TGAImage::RGB);
 	std::string  filename = "./testfile/african_head.obj";
 	mesh = OBJ::buildMeshFromFile(mesh, filename);
+	rasterize(mesh, TGAColor(255, 255, 255, 255), image, zBuffer);
+	image.write_tga_file("output.tga");
 	//Fill the surface black
 	SDL_FillRect(surface, NULL, SDL_MapRGB(surface->format, 0xFF, 0xFF, 0xFF));
 	while (!quit)
@@ -62,10 +68,11 @@ int main(int argc, char ** argv)
 		SDL_LockSurface(surface);
 
 		rasterize(mesh, white, pixels, zBuffer);
-
+		
 		//drawWireframe(mesh, red, pixels);
 		//픽셀버퍼를 surface 로 복사 4를 곱하는 이유는 픽셀버퍼는 색상포맷의 영향을 받음
 		memcpy(surface->pixels, pixels->buffer, pixels->mHeight*pixels->mWidth*4);
+		
 		SDL_UnlockSurface(surface);
 
 		//Update the surface
@@ -143,6 +150,23 @@ void rasterize(Mesh& mesh, Uint32 color, Buffer<Uint32> *pixels, Buffer<float> *
 	}
 }
 
+
+void rasterize(Mesh& mesh, TGAColor color, TGAImage &image, Buffer<float> *zBuffer)
+{
+
+	for (int i = 0; i < mesh.vertexIndices.size(); i++)
+	{
+		Vec3f screenCoords[3];
+		Vec3i face = mesh.vertexIndices[i];
+		Vec3f worldCoords[3];
+		float intensity = 0;
+		for (int j = 0; j < 3; j++) { screenCoords[j] = world2Screen(mesh.verts_[face.raw[j]]); worldCoords[j] = mesh.verts_[face.raw[j]]; }
+		if (backFaceCulling(worldCoords, light_dir, intensity))
+			triangle(screenCoords, color, image, zBuffer);
+	}
+}
+
+
 void drawWireframe(Mesh& mesh, Uint32 color, Buffer<Uint32> *pixels)
 {
 	for (int i = 0; i < mesh.vertexIndices.size(); i++)
@@ -169,7 +193,8 @@ void drawWireframe(Mesh& mesh, Uint32 color, Buffer<Uint32> *pixels)
 void triangle(Vec3f *vertices, Uint32 color, Buffer<Uint32> *pixels, Buffer<float> *zbuffer)
 {
 	//bounding box를 계산
-	int minX, minY, maxX, maxY;
+	int minX = std::numeric_limits<int>::max(), minY = std::numeric_limits<int>::max();
+	int maxX = -std::numeric_limits<int>::max(), maxY = -std::numeric_limits<int>::max();
 
 	triBoundBox(maxX, maxY, minX, minY,vertices,pixels);
 	
@@ -217,13 +242,77 @@ void triangle(Vec3f *vertices, Uint32 color, Buffer<Uint32> *pixels, Buffer<floa
 				
 			}
 
-				
+			//우측으로 한계단
+			w.x += A12;
+			w.y += A20;
+			w.z += A01;
+		}
+
+		//한 행 진행
+		w_row.x += B12;
+		w_row.y += B20;
+		w_row.z += B01;
+
+	}
+}
+
+void triangle(Vec3f *vertices, TGAColor color, TGAImage &image, Buffer<float> *zbuffer)
+{
+	//bounding box를 계산
+	int minX, minY, maxX, maxY;
+
+	triBoundBox(maxX, maxY, minX, minY, vertices, image);
+
+	float area, depth;
+	area = edge(vertices[0], vertices[1], vertices[2]);
+	if (area <= 0);
+	area = 1 / area;
+
+	//Triangle setup
+	Vec3f zVals(vertices[0].z, vertices[1].z, vertices[2].z);
+	float A01 = vertices[0].y - vertices[1].y, B01 = vertices[1].x - vertices[0].x;
+	float A12 = vertices[1].y - vertices[2].y, B12 = vertices[2].x - vertices[1].x;
+	float A20 = vertices[2].y - vertices[0].y, B20 = vertices[0].x - vertices[2].x;
+
+	//무게중심좌표 최솟값에서 시작
+	Vec3f p(minX, minY, 0);
+
+	//선분의 벡터
+	Vec3f w, w_row;
+
+	w_row.x = edge(vertices[1], vertices[2], p);
+	w_row.y = edge(vertices[2], vertices[0], p);
+	w_row.z = edge(vertices[0], vertices[1], p);
+
+	//Rasterize	
+	for (int y = minY; y <= maxY; y++)
+	{
+		w.x = w_row.x;
+		w.y = w_row.y;
+		w.z = w_row.z;
+		for (int x = minX; x <= maxX; x++)
+		{
+
+			if ((w.x >= 0) && (w.y >= 0) && (w.z >= 0))
+			{
+				//z-buffer check
+				depth = (w*area)*(zVals);
+				if ((*zbuffer)(x, y) < depth && depth <= 1.0)
+				{
+
+					(*zbuffer)(x, y) = depth;
+
+					image.set(x, y, color);
+				}
+
+			}
 
 			//우측으로 한계단
 			w.x += A12;
 			w.y += A20;
 			w.z += A01;
 		}
+
 		//한 행 진행
 		w_row.x += B12;
 		w_row.y += B20;
@@ -240,6 +329,7 @@ bool backFaceCulling(Vec3f *worldCoords, Vec3f &light, float &intensity)
 	intensity = n * light;
 	return intensity > 0;
 }
+
 //월드좌표->스크린
 Vec3f world2Screen(Vec3f v)
 {
@@ -268,6 +358,25 @@ void triBoundBox(int &maxX, int &maxY, int &minX, int &minY, Vec3f *vertices, Bu
 	maxY = std::min(maxY, pixels->mHeight - 1);
 	minY = std::max(minY, 0);
 
-	
 }
+
+
+//삼각형을 칠하는 상자를 설정
+void triBoundBox(int &maxX, int &maxY, int &minX, int &minY, Vec3f *vertices, TGAImage &image)
+{
+	maxX = std::max({ vertices[0].x,vertices[1].x,vertices[2].x });
+	maxY = std::max({ vertices[0].y,vertices[1].y,vertices[2].y });
+
+	minX = std::min({ vertices[0].x,vertices[1].x,vertices[2].x });
+	minY = std::min({ vertices[0].y,vertices[1].y,vertices[2].y });
+
+	//화면에대한 클리핑
+	maxX = std::min(maxX, image.get_width() - 1);
+	minX = std::max(minX, 0);
+
+	maxY = std::min(maxY, image.get_height() - 1);
+	minY = std::max(minY, 0);
+
+}
+
 

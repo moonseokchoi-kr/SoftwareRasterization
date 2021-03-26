@@ -10,6 +10,7 @@
 #include <SDL.h>
 #undef main
 #include <type_traits>
+#include <limits>
 //GPU버퍼와 유사한 형태로 만듭니다.
 //프레임버퍼와 Z버퍼를 만들 수 있어야합니다.
 //데이터를 자신이 보관하고 유지할 수 있어야합니다.
@@ -36,7 +37,7 @@ struct Buffer
 		{
 			for (int i = 0; i < mPixelCount; i++)
 			{
-				buffer[i] = 0.0f;
+				buffer[i] = -std::numeric_limits<float>::max();
 			}
 		}
 		else
