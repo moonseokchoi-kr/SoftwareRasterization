@@ -51,7 +51,7 @@ void OBJ::loadFileData(Mesh& mesh, std::ifstream &file)
 		{
 			iss >> x >> y;
 			Vec3f text(std::stof(x), std::stof(y), 0);
-			mesh.texts_.push_back(text);
+	 		mesh.texts_.push_back(text);
 		}
 		else if (key == "vn")
 		{

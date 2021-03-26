@@ -12,7 +12,7 @@ void triangle(Vec3f *vertices , Uint32 color, Buffer<Uint32> *pixels, Buffer<flo
 void triBoundBox(int &maxX, int &maxY, int &minX, int &minY, Vec3f *vertices, Buffer<Uint32> *pixels);
 int edge(const Vec3f& a, const Vec3f& b, const Vec3f& c);
 void rasterize(Mesh& mesh, Uint32 color, Buffer<Uint32> *pixels, Buffer<float> *zBuffer);
-bool backFaceCulling(Vec3f *wordCoords, Vec3f &v);
+bool backFaceCulling(Vec3f *wordCoords, Vec3f &v, float& intensity);
 
 Vec3f world2Screen(Vec3f v);
 static const int WIDTH = 800;
@@ -41,6 +41,7 @@ int main(int argc, char ** argv)
 	Buffer<Uint32> *pixels = new Buffer<Uint32>(WIDTH, HEIGHT, new Uint32[WIDTH * HEIGHT*4]);
 	Buffer<float> *zBuffer = new Buffer<float>(WIDTH, HEIGHT, new float[WIDTH*HEIGHT]);
 	pixels->clear();
+	//zBuffer->clear();
 	Mesh mesh;
 	std::string  filename = "./testfile/african_head.obj";
 	mesh = OBJ::buildMeshFromFile(mesh, filename);
@@ -135,8 +136,10 @@ void rasterize(Mesh& mesh, Uint32 color, Buffer<Uint32> *pixels, Buffer<float> *
 		Vec3f screenCoords[3];
 		Vec3i face = mesh.vertexIndices[i];
 		Vec3f worldCoords[3];
+		float intensity = 0;
 		for (int j = 0; j < 3; j++) { screenCoords[j] = world2Screen(mesh.verts_[face.raw[j]]); worldCoords[j] = mesh.verts_[face.raw[j]]; }
-		triangle(screenCoords, SDL_MapRGBA(mappingFormat, rand()/0xff, rand() / 0xff, rand() / 0xff, 0xff), pixels, zBuffer);
+		if(backFaceCulling(worldCoords, light_dir, intensity))
+			triangle(screenCoords, SDL_MapRGB(mappingFormat, intensity*0xff, intensity * 0xff, intensity * 0xff), pixels, zBuffer);
 	}
 }
 
@@ -158,6 +161,9 @@ void drawWireframe(Mesh& mesh, Uint32 color, Buffer<Uint32> *pixels)
 		}
 	}
 }
+
+
+
 
 
 void triangle(Vec3f *vertices, Uint32 color, Buffer<Uint32> *pixels, Buffer<float> *zbuffer)
@@ -196,11 +202,14 @@ void triangle(Vec3f *vertices, Uint32 color, Buffer<Uint32> *pixels, Buffer<floa
 		w.z = w_row.z;
 		for (int x = minX; x <= maxX; x++)
 		{
-			if (w.x >= 0 && w.y >= 0 && w.z >= 0) 
+			
+			if ((w.x >= 0) && (w.y >= 0) && (w.z >= 0)) 
 			{
+				//z-buffer check
 				depth = (w*area)*(zVals);
 				if ((*zbuffer)(x, y) < depth && depth <= 1.0)
 				{
+					
 					(*zbuffer)(x, y) = depth;
 
 					(*pixels)(x, y) = color;
@@ -223,12 +232,12 @@ void triangle(Vec3f *vertices, Uint32 color, Buffer<Uint32> *pixels, Buffer<floa
 	}
 }
 
-bool backFaceCulling(Vec3f *worldCoords, Vec3f &light)
+bool backFaceCulling(Vec3f *worldCoords, Vec3f &light, float &intensity)
 {
 	Vec3f n;
-	n.cross(worldCoords[2] - worldCoords[0], worldCoords[1] - worldCoords[0]);
+	n = n.cross(worldCoords[2] - worldCoords[0], worldCoords[1] - worldCoords[0]);
 	n.normalize();
-	int intensity = n * light;
+	intensity = n * light;
 	return intensity > 0;
 }
 //월드좌표->스크린
