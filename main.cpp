@@ -16,6 +16,16 @@ Vec3f light_dir(-1.f, 1.f, 1.f);
 float intersity = 0;
 std::string filename = "./testfile/african_head.obj";
 
+
+//function
+
+void line(int x0, int y0, int x1, int y1, TGAImage &image, TGAColor color);
+void triangle(Vec3f *pts, float *zbuffer, TGAImage &image, TGAColor color);
+Vec3f world2screen(Vec3f v);
+bool backFaceCulling(Vec3f *worldCoords, Vec3f &light, float &intensity);
+void rasterize(Mesh& mesh, TGAColor color, TGAImage &image, float *zBuffer);
+
+//implement 
 void line(int x0, int y0, int x1, int y1, TGAImage &image, TGAColor color) {
 	bool steep = false;
 	if (std::abs(x0 - x1) < std::abs(y0 - y1)) {
@@ -86,7 +96,7 @@ bool backFaceCulling(Vec3f *worldCoords, Vec3f &light, float &intensity)
 	return intensity > 0;
 }
 Vec3f world2screen(Vec3f v) {
-	return Vec3f((v.x + 1.)*width / 2. + .5, (v.y + 1.)*height / 2. + .5, v.z);
+	return Vec3f((v.x + 1.f)*width / 2.f + .5f, (v.y + 1.f)*height / 2.f + .5f, v.z);
 }
 
 void rasterize(Mesh& mesh, TGAColor color, TGAImage &image, float *zBuffer)

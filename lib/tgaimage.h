@@ -35,7 +35,7 @@ struct TGAColor {
 	TGAColor() : val(0), bytespp(1) {
 	}
 
-	TGAColor(unsigned char R, unsigned char G, unsigned char B, unsigned char A=255) : b(B), g(G), r(R), a(A), bytespp(4) {
+	TGAColor(unsigned char R, unsigned char G, unsigned char B, unsigned char A = 255) : b(B), g(G), r(R), a(A), bytespp(4) {
 	}
 
 	TGAColor(int v, int bpp) : val(v), bytespp(bpp) {
@@ -45,7 +45,7 @@ struct TGAColor {
 	}
 
 	TGAColor(const unsigned char *p, int bpp) : val(0), bytespp(bpp) {
-		for (int i=0; i<bpp; i++) {
+		for (int i = 0; i < bpp; i++) {
 			raw[i] = p[i];
 		}
 	}
@@ -71,14 +71,14 @@ protected:
 	bool unload_rle_data(std::ofstream &out);
 public:
 	enum Format {
-		GRAYSCALE=1, RGB=3, RGBA=4
+		GRAYSCALE = 1, RGB = 3, RGBA = 4
 	};
 
 	TGAImage();
 	TGAImage(int w, int h, int bpp);
 	TGAImage(const TGAImage &img);
 	bool read_tga_file(const char *filename);
-	bool write_tga_file(const char *filename, bool rle=true);
+	bool write_tga_file(const char *filename, bool rle = true);
 	bool flip_horizontally();
 	bool flip_vertically();
 	bool scale(int w, int h);
