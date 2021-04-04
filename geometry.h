@@ -1,8 +1,5 @@
-
-#ifndef __VECTOR_H__
-#define __VECTOR_H__
-/*
-#undef main
+#ifndef __GEOMETRY_H__
+#define __GEOMETRY_H__
 #include <cmath>
 #include <vector>
 #include <cassert>
@@ -26,7 +23,7 @@ template <typename T> struct vec<2, T> {
 	template <class U> vec<2, T>(const vec<2, U> &v);
 	T& operator[](const size_t i) { assert(i < 2); return i <= 0 ? x : y; }
 	const T& operator[](const size_t i) const { assert(i < 2); return i <= 0 ? x : y; }
-	
+
 	T x, y;
 };
 
@@ -40,6 +37,7 @@ template <typename T> struct vec<3, T> {
 	const T& operator[](const size_t i) const { assert(i < 3); return i <= 0 ? x : (1 == i ? y : z); }
 	float norm() { return std::sqrt(x*x + y * y + z * z); }
 	vec<3, T> & normalize(T l = 1) { *this = (*this)*(l / norm()); return *this; }
+
 	T x, y, z;
 };
 
@@ -219,5 +217,4 @@ typedef vec<3, float> Vec3f;
 typedef vec<3, int>   Vec3i;
 typedef vec<4, float> Vec4f;
 typedef mat<4, 4, float> Matrix;
-*/
 #endif //__GEOMETRY_H__

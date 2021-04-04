@@ -24,16 +24,22 @@
     <ClCompile Include="lib\tgaimage.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="model.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="vector.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
     <ClInclude Include="ObjParser.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="lib\tgaimage.h">
       <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="geometry.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="model.h">
+      <Filter>소스 파일</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
