@@ -146,13 +146,11 @@
   <ItemGroup>
     <ClCompile Include="lib\tgaimage.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="model.cpp" />
     <ClCompile Include="ObjParser.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="geometry.h" />
     <ClInclude Include="lib\tgaimage.h" />
-    <ClInclude Include="model.h" />
     <ClInclude Include="ObjParser.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
