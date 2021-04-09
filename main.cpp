@@ -13,7 +13,7 @@ const TGAColor red = TGAColor(255, 0, 0, 255);
 Mesh mesh;
 const int width = 800;
 const int height = 800;
-
+Vec2f interpolateTexture(Vec3f*screenCoords, Vec3f* texCoords, Vec3f p, TGAImage &texture);
 void line(int x0, int y0, int x1, int y1, TGAImage &image, TGAColor color) {
 	bool steep = false;
 	if (std::abs(x0 - x1) < std::abs(y0 - y1)) {
@@ -54,7 +54,7 @@ Vec3f barycentric(Vec3f A, Vec3f B, Vec3f C, Vec3f P) {
 
 //월드좌표를 스크린좌표로 클리핑합니다.
 Vec3f world2screen(Vec3f v) {
-	return Vec3f(int((v.x + 1.)*width / 2.f + .5f), int((v.y + 1.)*height / 2.f + .5f), v.z);
+	return Vec3f(int((v.x + 1.f)*width / 2.f + .5f), int((v.y + 1.f)*height / 2.f + .5f), v.z);
 }
 
 /**
@@ -65,9 +65,9 @@ Vec3f world2screen(Vec3f v) {
  * 1. 삼각형의 끝점을 내부에 두는 상자를 계산합니다.
  * 2. 상자의 x의 최솟값, y의 최솟값에서 시작하여 주어진 삼각형에 대한 점P의 무게중심을 찾습니다.
  * 3. 그 값중 하나라도 0이 있다면 패스합니다
- * 4. 아닐경우 zbuffer값을 계산하여 zbuffer에 저장한후 픽셀에 색을 칠합니다.
+ * 4. 아닐경우 zbuffer값을 계산하여 zbuffer에 저장한후 zbuffer에 따라 픽셀에 색을 칠합니다.
  */
-void triangle(Vec3f *pts, float *zbuffer, TGAImage &image, TGAColor color) {
+void triangle(Vec3f *pts, Vec3f *textureCoord, float *zbuffer, TGAImage &image,TGAColor color) {
 	Vec2f bboxmin(std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
 	Vec2f bboxmax(-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
 	Vec2f clamp(image.get_width() - 1, image.get_height() - 1);
@@ -92,38 +92,57 @@ void triangle(Vec3f *pts, float *zbuffer, TGAImage &image, TGAColor color) {
 	}
 }
 
+//인접한세정점 좌표와의 거리에 비례하여 값을 혼합하는것
+Vec2f interpolateTexture(Vec3f*screenCoords, Vec3f* texCoords, TGAImage &texture)
+{
+	float dist0 = (screenCoords[1] - screenCoords[2]).norm();
+	float dist1 = (screenCoords[0] - screenCoords[1]).norm();
+	float dist2 = (screenCoords[0] - screenCoords[2]).norm();
+	float area = (screenCoords[2][0] - screenCoords[0][0])*(screenCoords[1][1] - screenCoords[0][1]) - (screenCoords[2][1] - screenCoords[0][1])*(screenCoords[1][0] - screenCoords[0][0]);
+
+	dist0 /= area;
+	dist1 /= area;
+	dist2 /= area;
+
+	return Vec2f(0, 0);
+}
+
 /**
  * rasterize
  *
- * 1. calculate coords
+ * 1. calculate coordinate
  * 2. draw triangle
+ * 3. texture on image
  */
-void rasterize(Mesh& mesh, TGAColor color, TGAImage &image, float *zBuffer)
+void rasterize(Mesh& mesh, TGAImage &image, TGAImage & texture, TGAColor color,float *zBuffer)
 {
-	Vec3f light_dir(-1.f, 0.f, 0.f);
+	Vec3f light_dir(0, 0, -1);
 	for (int i = 0; i < mesh.vertexIndices.size(); i++)
 	{
+		//vertex
 		Vec3f screenCoords[3];
 		Vec3i face = mesh.vertexIndices[i];
+		Vec3f worldCoords[3];
+		//texture
+		Vec3f textCoords[3];
+		Vec3i tex = mesh.textureIndices[i];
 		//Vec3f normal = mesh.normalsIndices[i];
-		for (int j = 0; j < 3; j++) { screenCoords[j] = world2screen(mesh.verts_[face[j]]);}
-		
-		triangle(screenCoords,zBuffer,image, TGAColor(rand() % 255, rand() % 255, rand() % 255, 255));
+		for (int j = 0; j < 3; j++) 
+		{ 
+			worldCoords[j] = mesh.verts_[face[j]];
+			screenCoords[j] = world2screen(mesh.verts_[face[j]]);
+			textCoords[j] = mesh.texts_[tex[j]];
+			
+		}
+
+		Vec3f n = cross(worldCoords[2] - worldCoords[0], worldCoords[1] - worldCoords[0]);
+		n.normalize();
+		float intensity = n * light_dir;
+		if(intensity>0)
+			triangle(screenCoords,textCoords,zBuffer,image,TGAColor(intensity*255, intensity * 255, intensity * 255, 255));
+		//setTexture(screenCoords, textCoords, image, texture);
 	}
 }
-
-
-/**
- * texture
- * 1. load texture image file
- * 2. calculate coords
- * 3. save the color
- */
-
-
-
-
-
 
 
 
@@ -146,13 +165,18 @@ int main(int argc, char** argv) {
 	for (int i = width * height; i--; zbuffer[i] = -std::numeric_limits<float>::max());
 
 	TGAImage image(width, height, TGAImage::RGB);
+
+	TGAImage texture(width, height, TGAImage::RGB);
+
+	texture.read_tga_file("./testfile/african_head_diffuse.tga");
 	/*for (int i = 0; i < mesh.vertexIndices.size(); i++) {
 		Vec3i face = mesh.vertexIndices[i];
 		Vec3f pts[3];
 		for (int i = 0; i < 3; i++) pts[i] = world2screen(mesh.verts_[face[i]]);
 		triangle(pts, zbuffer, image, TGAColor(rand() % 255, rand() % 255, rand() % 255, 255));
 	}*/
-	rasterize(mesh, white, image, zbuffer);
+	rasterize(mesh, image, texture, white, zbuffer);
+
 
 	image.flip_vertically(); // i want to have the origin at the left bottom corner of the image
 	image.write_tga_file("output.tga");

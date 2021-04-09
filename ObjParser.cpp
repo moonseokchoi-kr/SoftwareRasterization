@@ -80,7 +80,7 @@ void OBJ::loadFileData(Mesh& mesh, std::ifstream &file)
 			
 		}
 	}
-	std::cerr << "# v# " << mesh.verts_.size() << " f# " << mesh.vertexIndices.size() << std::endl;
+	std::cerr << "# v# " << mesh.verts_.size() << " f# " << mesh.vertexIndices.size() << " t# " << mesh.texts_.size()<< std::endl;
 }
 
 std::vector<std::string> OBJ::splitStr(std::string &str, char delim)
