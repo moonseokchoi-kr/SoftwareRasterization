@@ -11,7 +11,6 @@
 const TGAColor white = TGAColor(255, 255, 255, 255);
 const TGAColor red = TGAColor(255, 0, 0, 255);
 Mesh mesh;
-Vec3f light_dir(-1.f, 0,0);
 const int width = 800;
 const int height = 800;
 
@@ -38,7 +37,8 @@ void line(int x0, int y0, int x1, int y1, TGAImage &image, TGAColor color) {
 		}
 	}
 }
-
+//삼각형과 한점의 무게중심을 찾습니다.
+// https://fgiesen.wordpress.com/2013/02/06/the-barycentric-conspirac/
 Vec3f barycentric(Vec3f A, Vec3f B, Vec3f C, Vec3f P) {
 	Vec3f s[2];
 	for (int i = 2; i--; ) {
@@ -51,26 +51,22 @@ Vec3f barycentric(Vec3f A, Vec3f B, Vec3f C, Vec3f P) {
 		return Vec3f(1.f - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z);
 	return Vec3f(-1, 1, 1); // in this case generate negative coordinates, it will be thrown away by the rasterizator
 }
-void calculateIntensity(Vec3f *worldCoords, Vec3f &light, float &intensity)
-{
-	Vec3f n;
-	n = cross(worldCoords[2] - worldCoords[0], worldCoords[1] - worldCoords[0]);
-	n.normalize();
-	intensity = n * light;
-}
 
-bool backFaceCulling(Vec3f *worldCoords, Vec3f &light, float &intensity)
-{
-	calculateIntensity(worldCoords,light, intensity);
-	return intensity > 0;
-}
-
-
+//월드좌표를 스크린좌표로 클리핑합니다.
 Vec3f world2screen(Vec3f v) {
 	return Vec3f(int((v.x + 1.)*width / 2.f + .5f), int((v.y + 1.)*height / 2.f + .5f), v.z);
 }
 
-
+/**
+ * triangle
+ *
+ * use the barycentric conspiracy
+ *
+ * 1. 삼각형의 끝점을 내부에 두는 상자를 계산합니다.
+ * 2. 상자의 x의 최솟값, y의 최솟값에서 시작하여 주어진 삼각형에 대한 점P의 무게중심을 찾습니다.
+ * 3. 그 값중 하나라도 0이 있다면 패스합니다
+ * 4. 아닐경우 zbuffer값을 계산하여 zbuffer에 저장한후 픽셀에 색을 칠합니다.
+ */
 void triangle(Vec3f *pts, float *zbuffer, TGAImage &image, TGAColor color) {
 	Vec2f bboxmin(std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
 	Vec2f bboxmax(-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
@@ -96,21 +92,50 @@ void triangle(Vec3f *pts, float *zbuffer, TGAImage &image, TGAColor color) {
 	}
 }
 
+/**
+ * rasterize
+ *
+ * 1. calculate coords
+ * 2. draw triangle
+ */
 void rasterize(Mesh& mesh, TGAColor color, TGAImage &image, float *zBuffer)
 {
-
+	Vec3f light_dir(-1.f, 0.f, 0.f);
 	for (int i = 0; i < mesh.vertexIndices.size(); i++)
 	{
 		Vec3f screenCoords[3];
 		Vec3i face = mesh.vertexIndices[i];
-		Vec3f worldCoords[3];
-		float intensity = 0;
-		for (int j = 0; j < 3; j++) { screenCoords[j] = world2screen(mesh.verts_[face[j]]); worldCoords[j] = mesh.verts_[face[j]]; }
-		calculateIntensity(worldCoords, light_dir, intensity);
-		triangle(screenCoords, zBuffer, image, TGAColor(intensity*255,intensity*255,intensity*255,255));
+		//Vec3f normal = mesh.normalsIndices[i];
+		for (int j = 0; j < 3; j++) { screenCoords[j] = world2screen(mesh.verts_[face[j]]);}
+		
+		triangle(screenCoords,zBuffer,image, TGAColor(rand() % 255, rand() % 255, rand() % 255, 255));
 	}
 }
 
+
+/**
+ * texture
+ * 1. load texture image file
+ * 2. calculate coords
+ * 3. save the color
+ */
+
+
+
+
+
+
+
+
+ /**
+  * rendered object
+  *
+  *
+  * 1. read obj file
+  * 2. clear zbuffer
+  * 3. rasterize
+  * 4. plotting the object
+  */
 int main(int argc, char** argv) {
 	
 	std::string filename = "./testfile/african_head.obj";
