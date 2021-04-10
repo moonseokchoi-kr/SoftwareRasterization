@@ -82,9 +82,9 @@ void triangle(Vec3f *pts, Vec3f *textureCoord, float *zbuffer, TGAImage &image, 
 	for (P.x = bboxmin.x; P.x <= bboxmax.x; P.x++) {
 		for (P.y = bboxmin.y; P.y <= bboxmax.y; P.y++) {
 			Vec3f bc_screen = barycentric(pts[0], pts[1], pts[2], P);
-			Vec2f correctUV = interpolateTexture(pts, textureCoord, bc_screen);
 			if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0) continue;
 			P.z = 0;
+			Vec2f correctUV = interpolateTexture(pts, textureCoord, P);
 			for (int i = 0; i < 3; i++) P.z += pts[i][2] * bc_screen[i];
 			if (zbuffer[int(P.x + P.y*width)] < P.z) {
 				zbuffer[int(P.x + P.y*width)] = P.z;
