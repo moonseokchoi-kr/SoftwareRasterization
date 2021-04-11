@@ -13,8 +13,8 @@ const TGAColor red = TGAColor(255, 0, 0, 255);
 Mesh mesh;
 const int width = 800;
 const int height = 800;
-Vec2f interpolateTexture(Vec3f*screenCoords, Vec3f *textCoords, Vec3f p);
-float calculateBary(Vec3f a, Vec3f b, Vec3f c , Vec3f p);
+Vec2f calculateCorrectUV(Vec3f*screenCoords, Vec3f *textCoords, Vec3f p);
+TGAColor interpolationTriangle(Vec3f* screenCoords, Vec3f *textCoords, Vec3f p, TGAImage& texture);
 void line(int x0, int y0, int x1, int y1, TGAImage &image, TGAColor color) {
 	bool steep = false;
 	if (std::abs(x0 - x1) < std::abs(y0 - y1)) {
@@ -68,7 +68,7 @@ Vec3f world2screen(Vec3f v) {
  * 3. 그 값중 하나라도 0이 있다면 패스합니다
  * 4. 아닐경우 zbuffer값을 계산하여 zbuffer에 저장한후 zbuffer에 따라 픽셀에 색을 칠합니다.
  */
-void triangle(Vec3f *pts, Vec3f *textureCoord, float *zbuffer, TGAImage &image, TGAImage& texture, float itensity) {
+void triangle(Vec3f *pts, Vec3f *textureCoord, float *zbuffer, TGAImage &image, TGAImage& texture, TGAColor color, float intensity) {
 	Vec2f bboxmin(std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
 	Vec2f bboxmax(-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
 	Vec2f clamp(image.get_width() - 1, image.get_height() - 1);
@@ -82,30 +82,35 @@ void triangle(Vec3f *pts, Vec3f *textureCoord, float *zbuffer, TGAImage &image, 
 	for (P.x = bboxmin.x; P.x <= bboxmax.x; P.x++) {
 		for (P.y = bboxmin.y; P.y <= bboxmax.y; P.y++) {
 			Vec3f bc_screen = barycentric(pts[0], pts[1], pts[2], P);
+			
 			if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0) continue;
 			P.z = 0;
-			Vec2f correctUV = interpolateTexture(pts, textureCoord, P);
+			Vec2f correctUV = calculateCorrectUV(pts, textureCoord, bc_screen);
 			for (int i = 0; i < 3; i++) P.z += pts[i][2] * bc_screen[i];
 			if (zbuffer[int(P.x + P.y*width)] < P.z) {
 				zbuffer[int(P.x + P.y*width)] = P.z;
-				image.set(P.x, P.y, texture.get(correctUV.x,correctUV.y));
+				TGAColor temp(texture.get(P.x/bc_screen.z/1/bc_screen.z,P.y/bc_screen.z/1/bc_screen.z).val, TGAImage::RGB);
+				image.set(P.x, P.y, temp);
 			}
 		}
 	}
 }
 
+
 //인접한세정점 좌표와의 거리에 비례하여 값을 혼합하는것
-Vec2f interpolateTexture(Vec3f*screenCoords, Vec3f *textCoords ,Vec3f p)
+Vec2f calculateCorrectUV(Vec3f*screenCoords, Vec3f *textCoords ,Vec3f p)
 {
-	float baryA = (screenCoords[1].y-screenCoords[2].y)*(p.x-screenCoords[2].x)+(screenCoords[2].x - screenCoords[1].x)*(p.y - screenCoords[2].y)/
-		(screenCoords[1].y - screenCoords[2].y)*(screenCoords[0].x - screenCoords[2].x) + (screenCoords[2].x - screenCoords[1].x)*(screenCoords[0].y - screenCoords[2].y);
-	float baryB = (screenCoords[2].y - screenCoords[0].y)*(p.x - screenCoords[2].x) + (screenCoords[0].x - screenCoords[2].x)*(p.y - screenCoords[2].y) /
-		(screenCoords[1].y - screenCoords[2].y)*(screenCoords[0].x - screenCoords[2].x) + (screenCoords[2].x - screenCoords[1].x)*(screenCoords[0].y - screenCoords[2].y);
+	float baryA = (textCoords[1].y-textCoords[2].y)*(p.x-textCoords[2].x)+(textCoords[2].x - textCoords[1].x)*(p.y - textCoords[2].y)/
+		(textCoords[1].y - textCoords[2].y)*(textCoords[0].x - textCoords[2].x) + (textCoords[2].x - textCoords[1].x)*(textCoords[0].y - textCoords[2].y);
+	float baryB = (textCoords[2].y - textCoords[0].y)*(p.x - textCoords[2].x) + (textCoords[0].x - textCoords[2].x)*(p.y - textCoords[2].y) /
+		(textCoords[1].y - textCoords[2].y)*(textCoords[0].x - textCoords[2].x) + (textCoords[2].x - textCoords[1].x)*(textCoords[0].y - textCoords[2].y);
 	float baryC = 1 - baryA - baryB;
 
 	Vec3f correctUV = textCoords[0]* baryA +  textCoords[1] * baryB +  textCoords[2]* baryC;
-	return Vec2f(correctUV[0],correctUV[1]);
+
+	return Vec2f(correctUV[0]/p.z/1/p.z,correctUV[1]/p.z/1/p.z);
 }
+
 
 /**
  * rasterize
@@ -139,7 +144,7 @@ void rasterize(Mesh& mesh, TGAImage &image, TGAImage & texture, TGAColor color,f
 		n.normalize();
 		float intensity = n * light_dir;
 		if(intensity>0)
-			triangle(screenCoords,textCoords,zBuffer,image,texture,intensity);
+			triangle(screenCoords,textCoords,zBuffer,image,texture, TGAColor(intensity*255, intensity*255, intensity*255),intensity);
 		//setTexture(screenCoords, textCoords, image, texture);
 	}
 }
