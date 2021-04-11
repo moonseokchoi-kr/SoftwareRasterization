@@ -82,23 +82,26 @@ void triangle(Vec3f *pts, Vec3f *textureCoord, float *zbuffer, TGAImage &image, 
 	for (P.x = bboxmin.x; P.x <= bboxmax.x; P.x++) {
 		for (P.y = bboxmin.y; P.y <= bboxmax.y; P.y++) {
 			Vec3f bc_screen = barycentric(pts[0], pts[1], pts[2], P);
-			
+			Vec3f correctUV = textureCoord[0] * bc_screen.x + textureCoord[1] * bc_screen.y + textureCoord[2] * bc_screen.z;
 			if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0) continue;
 			P.z = 0;
-			Vec2f correctUV = calculateCorrectUV(pts, textureCoord, bc_screen);
 			for (int i = 0; i < 3; i++) P.z += pts[i][2] * bc_screen[i];
 			if (zbuffer[int(P.x + P.y*width)] < P.z) {
 				zbuffer[int(P.x + P.y*width)] = P.z;
-				TGAColor temp(texture.get(P.x/bc_screen.z/1/bc_screen.z,P.y/bc_screen.z/1/bc_screen.z).val, TGAImage::RGB);
-				image.set(P.x, P.y, temp);
+				//texture mapping
+				float uu = correctUV.x*texture.get_width();
+				float vv = correctUV.y*texture.get_height();
+				TGAColor temp(texture.get(uu,vv));
+				TGAColor finalColor(temp.r*intensity, temp.g*intensity, temp.b*intensity);
+				image.set(P.x, P.y, finalColor);
 			}
 		}
 	}
 }
 
-
+/*
 //인접한세정점 좌표와의 거리에 비례하여 값을 혼합하는것
-Vec2f calculateCorrectUV(Vec3f*screenCoords, Vec3f *textCoords ,Vec3f p)
+Vec3f BarycentricCoordinates(Vec3f*screenCoords, Vec3f p)
 {
 	float baryA = (textCoords[1].y-textCoords[2].y)*(p.x-textCoords[2].x)+(textCoords[2].x - textCoords[1].x)*(p.y - textCoords[2].y)/
 		(textCoords[1].y - textCoords[2].y)*(textCoords[0].x - textCoords[2].x) + (textCoords[2].x - textCoords[1].x)*(textCoords[0].y - textCoords[2].y);
@@ -108,9 +111,9 @@ Vec2f calculateCorrectUV(Vec3f*screenCoords, Vec3f *textCoords ,Vec3f p)
 
 	Vec3f correctUV = textCoords[0]* baryA +  textCoords[1] * baryB +  textCoords[2]* baryC;
 
-	return Vec2f(correctUV[0]/p.z/1/p.z,correctUV[1]/p.z/1/p.z);
+	return Vec3f(baryA, baryB, baryC);
 }
-
+*/
 
 /**
  * rasterize
