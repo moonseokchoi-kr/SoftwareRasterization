@@ -11,10 +11,41 @@
 const TGAColor white = TGAColor(255, 255, 255, 255);
 const TGAColor red = TGAColor(255, 0, 0, 255);
 Mesh mesh;
+float *zbuffer = NULL;
 const int width = 800;
 const int height = 800;
-Vec2f calculateCorrectUV(Vec3f*screenCoords, Vec3f *textCoords, Vec3f p);
-TGAColor interpolationTriangle(Vec3f* screenCoords, Vec3f *textCoords, Vec3f p, TGAImage& texture);
+int depth = 255;
+
+
+//Vec2f calculateCorrectUV(Vec3f*screenCoords, Vec3f *textCoords, Vec3f p);
+//TGAColor interpolationTriangle(Vec3f* screenCoords, Vec3f *textCoords, Vec3f p, TGAImage& texture
+
+Vec3f m2v(Matrix m)
+{
+	return Vec3f(m[0][0] / m[3][0], m[1][0] / m[3][0], m[2][0] / m[3][0]);
+
+}
+
+Matrix v2m(Vec3f v) {
+	Matrix m;
+	m[0][0] = v.x;
+	m[1][0] = v.y;
+	m[2][0] = v.z;
+	m[3][0] = 1.f;
+	return m;
+}
+
+Matrix viewport(int x, int y, int w, int h) {
+	Matrix m = Matrix::identity();
+	m[0][3] = x + w / 2.f;
+	m[1][3] = y + h / 2.f;
+	m[2][3] = depth / 2.f;
+
+	m[0][0] = w / 2.f;
+	m[1][1] = h / 2.f;
+	m[2][2] = depth / 2.f;
+	return m;
+}
 void line(int x0, int y0, int x1, int y1, TGAImage &image, TGAColor color) {
 	bool steep = false;
 	if (std::abs(x0 - x1) < std::abs(y0 - y1)) {
@@ -68,7 +99,7 @@ Vec3f world2screen(Vec3f v) {
  * 3. 그 값중 하나라도 0이 있다면 패스합니다
  * 4. 아닐경우 zbuffer값을 계산하여 zbuffer에 저장한후 zbuffer에 따라 픽셀에 색을 칠합니다.
  */
-void triangle(Vec3f *pts, Vec3f *textureCoord, float *zbuffer, TGAImage &image, TGAImage& texture, TGAColor color, float intensity) {
+void triangle(Vec3f *pts, Vec3f *textureCoord, float *zbuffer, TGAImage &image, TGAImage& texture, float intensity) {
 	Vec2f bboxmin(std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
 	Vec2f bboxmax(-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
 	Vec2f clamp(image.get_width() - 1, image.get_height() - 1);
@@ -125,6 +156,11 @@ Vec3f BarycentricCoordinates(Vec3f*screenCoords, Vec3f p)
 void rasterize(Mesh& mesh, TGAImage &image, TGAImage & texture, TGAColor color,float *zBuffer)
 {
 	Vec3f light_dir(0, 0, -1);
+	Matrix Projection = Matrix::identity();
+	Matrix ViewPort = viewport(width / 8, height / 8, width * 3 / 4, height * 3 / 4);
+	Vec3f camera(0, 0, 3);
+	Projection[3][2] = -1.f / camera.z;
+
 	for (int i = 0; i < mesh.vertexIndices.size(); i++)
 	{
 		//vertex
@@ -138,7 +174,7 @@ void rasterize(Mesh& mesh, TGAImage &image, TGAImage & texture, TGAColor color,f
 		for (int j = 0; j < 3; j++) 
 		{ 
 			worldCoords[j] = mesh.verts_[face[j]];
-			screenCoords[j] = world2screen(mesh.verts_[face[j]]);
+			screenCoords[j] = m2v(ViewPort*Projection*v2m(mesh.verts_[face[j]]));
 			textCoords[j] = mesh.texts_[tex[j]];
 			
 		}
@@ -147,7 +183,7 @@ void rasterize(Mesh& mesh, TGAImage &image, TGAImage & texture, TGAColor color,f
 		n.normalize();
 		float intensity = n * light_dir;
 		if(intensity>0)
-			triangle(screenCoords,textCoords,zBuffer,image,texture, TGAColor(intensity*255, intensity*255, intensity*255),intensity);
+			triangle(screenCoords,textCoords,zBuffer,image,texture,intensity);
 		//setTexture(screenCoords, textCoords, image, texture);
 	}
 }
@@ -169,7 +205,7 @@ int main(int argc, char** argv) {
 	mesh = OBJ::buildMeshFromFile(mesh,filename);
 	
 
-	float *zbuffer = new float[width*height];
+	zbuffer = new float[width*height];
 	for (int i = width * height; i--; zbuffer[i] = -std::numeric_limits<float>::max());
 
 	TGAImage image(width, height, TGAImage::RGB);
