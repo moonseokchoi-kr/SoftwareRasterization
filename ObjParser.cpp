@@ -43,7 +43,7 @@ void OBJ::loadFileData(Mesh& mesh, std::ifstream &file)
 		if (key == "v")
 		{
 			iss >> x >> y >> z;
-			Vec3f vertex(std::stof(x), std::stof(y), std::stof(z));
+			Vec3f vertex(-std::stof(x), -std::stof(y), std::stof(z));
 			mesh.verts_.push_back(vertex);
 		}
 		else if (key == "vt")

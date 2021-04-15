@@ -149,6 +149,7 @@
     <ClCompile Include="ObjParser.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="buffer.h" />
     <ClInclude Include="geometry.h" />
     <ClInclude Include="lib\tgaimage.h" />
     <ClInclude Include="ObjParser.h" />

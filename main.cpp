@@ -4,6 +4,8 @@
 #include <cstdlib>
 #include <limits>
 #include <string>
+#include <SDL.h>
+#include "buffer.h"
 #include "tgaimage.h"
 #include "ObjParser.h"
 #include "geometry.h"
@@ -99,10 +101,10 @@ Vec3f world2screen(Vec3f v) {
  * 3. 그 값중 하나라도 0이 있다면 패스합니다
  * 4. 아닐경우 zbuffer값을 계산하여 zbuffer에 저장한후 zbuffer에 따라 픽셀에 색을 칠합니다.
  */
-void triangle(Vec3f *pts, Vec3f *textureCoord, float *zbuffer, TGAImage &image, TGAImage& texture, float intensity) {
+void triangle(Vec3f *pts, Vec3f *textureCoord, float *zbuffer, Buffer<Uint32> *buffer, TGAImage& texture, float intensity) {
 	Vec2f bboxmin(std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
 	Vec2f bboxmax(-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
-	Vec2f clamp(image.get_width() - 1, image.get_height() - 1);
+	Vec2f clamp(buffer->mWidth - 1, buffer->mHeight - 1);
 	for (int i = 0; i < 3; i++) {
 		for (int j = 0; j < 2; j++) {
 			bboxmin[j] = std::max(0.f, std::min(bboxmin[j], pts[i][j]));
@@ -124,7 +126,7 @@ void triangle(Vec3f *pts, Vec3f *textureCoord, float *zbuffer, TGAImage &image, 
 				float vv = correctUV.y*texture.get_height();
 				TGAColor temp(texture.get(uu,vv));
 				TGAColor finalColor(temp.r*intensity, temp.g*intensity, temp.b*intensity);
-				image.set(P.x, P.y, finalColor);
+				(*buffer)(P.x,P.y) = finalColor.val;
 			}
 		}
 	}
@@ -153,7 +155,7 @@ Vec3f BarycentricCoordinates(Vec3f*screenCoords, Vec3f p)
  * 2. draw triangle
  * 3. texture on image
  */
-void rasterize(Mesh& mesh, TGAImage &image, TGAImage & texture, TGAColor color,float *zBuffer)
+void rasterize(Mesh& mesh, Buffer<Uint32> *buffer, TGAImage & texture, TGAColor color,float *zBuffer)
 {
 	Vec3f light_dir(0, 0, -1);
 	Matrix Projection = Matrix::identity();
@@ -183,7 +185,7 @@ void rasterize(Mesh& mesh, TGAImage &image, TGAImage & texture, TGAColor color,f
 		n.normalize();
 		float intensity = n * light_dir;
 		if(intensity>0)
-			triangle(screenCoords,textCoords,zBuffer,image,texture,intensity);
+			triangle(screenCoords,textCoords,zBuffer,buffer,texture,intensity);
 		//setTexture(screenCoords, textCoords, image, texture);
 	}
 }
@@ -208,21 +210,70 @@ int main(int argc, char** argv) {
 	zbuffer = new float[width*height];
 	for (int i = width * height; i--; zbuffer[i] = -std::numeric_limits<float>::max());
 
-	TGAImage image(width, height, TGAImage::RGB);
+	Buffer<Uint32> *pixels = new Buffer<Uint32>(width, height, new Uint32[width * height * 4]);
+	
+	pixels->clear();
+
+	//TGAImage image(width, height, TGAImage::RGB);
 
 	TGAImage texture(width, height, TGAImage::RGB);
-
 	texture.read_tga_file("./testfile/african_head_diffuse.tga");
+
+	//SDL2 Setting
+	bool quit = false;
+	SDL_Event event;
+	SDL_Init(SDL_INIT_VIDEO);
+
+	SDL_Window * window = SDL_CreateWindow("SoftWare Renderer",
+		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, 0);
+
+	SDL_Surface * surface = SDL_GetWindowSurface(window);
+
+	//Fill the surface black
+	SDL_FillRect(surface, NULL, SDL_MapRGB(surface->format, 0xFF, 0xFF, 0xFF));
+	while (!quit)
+	{
+
+		SDL_WaitEvent(&event);
+
+		switch (event.type)
+		{
+		case SDL_QUIT:
+			quit = true;
+			break;
+		}
+		//Allows surface editing
+		SDL_LockSurface(surface);
+
+		rasterize(mesh, pixels, texture, white, zbuffer);
+
+		//픽셀버퍼를 surface 로 복사 4를 곱하는 이유는 픽셀버퍼는 색상포맷의 영향을 받음
+		memcpy(surface->pixels, pixels->buffer, pixels->mHeight*pixels->mWidth * 4);
+		SDL_UnlockSurface(surface);
+
+		//Update the surface
+		SDL_UpdateWindowSurface(window);
+	}
+
+	delete pixels;
+
+	SDL_DestroyWindow(window);
+	SDL_Quit();
+
+	return 0;
+
+
+
+	
 	/*for (int i = 0; i < mesh.vertexIndices.size(); i++) {
 		Vec3i face = mesh.vertexIndices[i];
 		Vec3f pts[3];
 		for (int i = 0; i < 3; i++) pts[i] = world2screen(mesh.verts_[face[i]]);
 		triangle(pts, zbuffer, image, TGAColor(rand() % 255, rand() % 255, rand() % 255, 255));
 	}*/
-	rasterize(mesh, image, texture, white, zbuffer);
 
 
-	image.flip_vertically(); // i want to have the origin at the left bottom corner of the image
-	image.write_tga_file("output.tga");
+	//image.flip_vertically(); // i want to have the origin at the left bottom corner of the image
+	//image.write_tga_file("output.tga");
 	return 0;
 }
