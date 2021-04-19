@@ -131,9 +131,9 @@ void triangle(Vec3f *pts, Vec3f *textureCoord, float *zbuffer, Buffer<Uint32> *b
 				//texture mapping
 				float uu = correctUV.x*texture.get_width();
 				float vv = correctUV.y*texture.get_height();
-				//TGAColor temp(texture.get(uu,vv));
-				//TGAColor finalColor(temp.r*intensity, temp.g*intensity, temp.b*intensity);
-				TGAColor finalColor(intensity * 255, intensity * 255, intensity * 255);
+				TGAColor temp(texture.get(uu,vv));
+				TGAColor finalColor(temp.r*intensity, temp.g*intensity, temp.b*intensity);
+				//TGAColor finalColor(intensity * 255, intensity * 255, intensity * 255);
 				(*buffer)(P.x,P.y) = finalColor.val;
 			}
 		}
@@ -184,7 +184,8 @@ void rasterize(Mesh& mesh, Buffer<Uint32> *buffer, TGAImage & texture, TGAColor 
 		for (int j = 0; j < 3; j++) 
 		{ 
 			worldCoords[j] = mesh.verts_[face[j]];
-			screenCoords[j] = m2v(ViewPort*Projection*v2m(worldCoords[j]));
+			//screenCoords[j] = m2v(ViewPort*Projection*v2m(worldCoords[j]));
+			screenCoords[j] = world2screen(worldCoords[j]);
 			textCoords[j] = mesh.texts_[tex[j]];
 			
 		}
@@ -226,6 +227,7 @@ int main(int argc, char** argv) {
 
 	TGAImage texture(width, height, TGAImage::RGB);
 	texture.read_tga_file("./testfile/african_head_diffuse.tga");
+	texture.flip_vertically();
 
 	//SDL2 Setting
 	bool quit = false;
