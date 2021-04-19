@@ -21,13 +21,18 @@ int depth = 255;
 
 //Vec2f calculateCorrectUV(Vec3f*screenCoords, Vec3f *textCoords, Vec3f p);
 //TGAColor interpolationTriangle(Vec3f* screenCoords, Vec3f *textCoords, Vec3f p, TGAImage& texture
-
+/*
+* 행렬을 벡터로 변환
+*/
 Vec3f m2v(Matrix m)
 {
 	return Vec3f(m[0][0] / m[3][0], m[1][0] / m[3][0], m[2][0] / m[3][0]);
 
 }
 
+/*
+* 벡터를 행렬로
+*/
 Matrix v2m(Vec3f v) {
 	Matrix m;
 	m[0][0] = v.x;
@@ -36,7 +41,9 @@ Matrix v2m(Vec3f v) {
 	m[3][0] = 1.f;
 	return m;
 }
-
+/**
+ * ViewPort생성
+ */
 Matrix viewport(int x, int y, int w, int h) {
 	Matrix m = Matrix::identity();
 	m[0][3] = x + w / 2.f;
