@@ -46,9 +46,9 @@ Matrix v2m(Vec3f v) {
  */
 Matrix viewport(int x, int y, int w, int h) {
 	Matrix m = Matrix::identity();
-	m[0][3] = x + w / 2.f;
-	m[1][3] = y + h / 2.f;
-	m[2][3] = depth / 2.f;
+	m[0][3] = int(x + w / 2.f);
+	m[1][3] = int(y + h / 2.f);
+	m[2][3] = int(depth / 2.f);
 
 	m[0][0] = w / 2.f;
 	m[1][1] = h / 2.f;
@@ -131,8 +131,9 @@ void triangle(Vec3f *pts, Vec3f *textureCoord, float *zbuffer, Buffer<Uint32> *b
 				//texture mapping
 				float uu = correctUV.x*texture.get_width();
 				float vv = correctUV.y*texture.get_height();
-				TGAColor temp(texture.get(uu,vv));
-				TGAColor finalColor(temp.r*intensity, temp.g*intensity, temp.b*intensity);
+				//TGAColor temp(texture.get(uu,vv));
+				//TGAColor finalColor(temp.r*intensity, temp.g*intensity, temp.b*intensity);
+				TGAColor finalColor(intensity * 255, intensity * 255, intensity * 255);
 				(*buffer)(P.x,P.y) = finalColor.val;
 			}
 		}
@@ -183,7 +184,7 @@ void rasterize(Mesh& mesh, Buffer<Uint32> *buffer, TGAImage & texture, TGAColor 
 		for (int j = 0; j < 3; j++) 
 		{ 
 			worldCoords[j] = mesh.verts_[face[j]];
-			screenCoords[j] = m2v(ViewPort*Projection*v2m(mesh.verts_[face[j]]));
+			screenCoords[j] = m2v(ViewPort*Projection*v2m(worldCoords[j]));
 			textCoords[j] = mesh.texts_[tex[j]];
 			
 		}
