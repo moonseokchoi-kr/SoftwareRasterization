@@ -41,18 +41,35 @@ Matrix v2m(Vec3f v) {
 	m[3][0] = 1.f;
 	return m;
 }
-/**
- * ViewPort持失
- */
 Matrix viewport(int x, int y, int w, int h) {
 	Matrix m = Matrix::identity();
-	m[0][3] = int(x + w / 2.f);
-	m[1][3] = int(y + h / 2.f);
-	m[2][3] = int(depth / 2.f);
+	m[0][3] = x + w / 2.f;
+	m[1][3] = y + h / 2.f;
+	m[2][3] = depth / 2.f;
 
 	m[0][0] = w / 2.f;
 	m[1][1] = h / 2.f;
 	m[2][2] = depth / 2.f;
+	return m;
+}
+
+/**
+ * projectionMatrix持失
+ */
+Matrix projectionMatrix(float fov, float AR, float n, float f) {
+	Matrix m;
+
+	float tanHalfFOVInverse = 1 / std::tan((fov / 2)*(MY_PI / 180));
+
+	m[0][0] = tanHalfFOVInverse;
+
+	m[1][1] = AR * tanHalfFOVInverse;
+
+	m[2][2] = n / (f - n);
+
+	m[2][3] = (f*n) / (f - n);
+
+	m[3][2] = -1;
 	return m;
 }
 void line(int x0, int y0, int x1, int y1, TGAImage &image, TGAColor color) {
@@ -166,10 +183,11 @@ Vec3f BarycentricCoordinates(Vec3f*screenCoords, Vec3f p)
 void rasterize(Mesh& mesh, Buffer<Uint32> *buffer, TGAImage & texture, TGAColor color,float *zBuffer)
 {
 	Vec3f light_dir(0, 0, -1);
-	Matrix Projection = Matrix::identity();
-	Matrix ViewPort = viewport(width / 8, height / 8, width * 3 / 4, height * 3 / 4);
+	//Matrix projection = projectionMatrix(50, 0.1, 100, width / (float)height);
+	Matrix projection = Matrix::identity();
+	Matrix viewPort = viewport(width / 8, height / 8, width * 3 / 4, height * 3 / 4);
 	Vec3f camera(0, 0, 3);
-	Projection[3][2] = -1.f / camera.z;
+	projection[3][2] = -1.f / camera.z;
 
 	for (int i = 0; i < mesh.vertexIndices.size(); i++)
 	{
@@ -185,7 +203,7 @@ void rasterize(Mesh& mesh, Buffer<Uint32> *buffer, TGAImage & texture, TGAColor 
 		{ 
 			worldCoords[j] = mesh.verts_[face[j]];
 			//screenCoords[j] = m2v(ViewPort*Projection*v2m(worldCoords[j]));
-			screenCoords[j] = world2screen(worldCoords[j]);
+			screenCoords[j] = m2v(viewPort*projection*v2m(worldCoords[j]));
 			textCoords[j] = mesh.texts_[tex[j]];
 			
 		}

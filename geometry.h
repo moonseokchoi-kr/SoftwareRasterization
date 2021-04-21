@@ -5,6 +5,9 @@
 #include <cassert>
 #include <iostream>
 
+# define MY_PI 3.14159265358979323846
+constexpr double my_pi = 3.141592653589793238462643383279502884L;
+
 template<size_t DimCols, size_t DimRows, typename T> class mat;
 
 template <size_t DIM, typename T> struct vec {
@@ -140,8 +143,12 @@ public:
 
 	static mat<DimRows, DimCols, T> identity() {
 		mat<DimRows, DimCols, T> ret;
-		for (size_t i = DimRows; i--; )
-			for (size_t j = DimCols; j--; ret[i][j] = (i == j));
+		for (size_t i = 0; i < DimRows; i++) {
+			for (size_t j = 0; j < DimCols; j++) {
+				ret[i][j] = (i == j ? 1.f : 0.f);
+			}		
+		}
+			
 		return ret;
 	}
 
