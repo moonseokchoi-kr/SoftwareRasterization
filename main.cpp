@@ -125,7 +125,7 @@ Vec3f world2screen(Vec3f v) {
  * 3. 그 값중 하나라도 0이 있다면 패스합니다
  * 4. 아닐경우 zbuffer값을 계산하여 zbuffer에 저장한후 zbuffer에 따라 픽셀에 색을 칠합니다.
  */
-void triangle(Vec3f *pts, Vec3f *textureCoord, float *zbuffer, Buffer<Uint32> *buffer, TGAImage& texture, float intensity) {
+void triangle(Vec3f *pts, Vec3f *textureCoord, float *zbuffer, Buffer<Uint32> *buffer, Mesh& mesh, float intensity) {
 	Vec2f bboxmin(std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
 	Vec2f bboxmax(-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
 	Vec2f clamp(buffer->mWidth - 1, buffer->mHeight - 1);
@@ -146,9 +146,7 @@ void triangle(Vec3f *pts, Vec3f *textureCoord, float *zbuffer, Buffer<Uint32> *b
 			if (zbuffer[int(P.x + P.y*width)] < P.z) {
 				zbuffer[int(P.x + P.y*width)] = P.z;
 				//texture mapping
-				float uu = correctUV.x*texture.get_width();
-				float vv = correctUV.y*texture.get_height();
-				TGAColor temp(texture.get(uu,vv));
+				TGAColor temp(mesh.textureMap.get(correctUV.x,correctUV.y));
 				TGAColor finalColor(temp.r*intensity, temp.g*intensity, temp.b*intensity);
 				//TGAColor finalColor(intensity * 255, intensity * 255, intensity * 255);
 				(*buffer)(P.x,P.y) = finalColor.val;
@@ -180,7 +178,7 @@ Vec3f BarycentricCoordinates(Vec3f*screenCoords, Vec3f p)
  * 2. draw triangle
  * 3. texture on image
  */
-void rasterize(Mesh& mesh, Buffer<Uint32> *buffer, TGAImage & texture, TGAColor color,float *zBuffer)
+void rasterize(Mesh& mesh, Buffer<Uint32> *buffer,  TGAColor color,float *zBuffer)
 {
 	Vec3f light_dir(0, 0, -1);
 	//Matrix projection = projectionMatrix(50, 0.1, 100, width / (float)height);
@@ -197,22 +195,26 @@ void rasterize(Mesh& mesh, Buffer<Uint32> *buffer, TGAImage & texture, TGAColor 
 		Vec3f worldCoords[3];
 		//texture
 		Vec3f textCoords[3];
-		Vec3i tex = mesh.textureIndices[i];
 		//Vec3f normal = mesh.normalsIndices[i];
 		for (int j = 0; j < 3; j++) 
 		{ 
 			worldCoords[j] = mesh.verts_[face[j]];
+			
 			//screenCoords[j] = m2v(ViewPort*Projection*v2m(worldCoords[j]));
-			screenCoords[j] = m2v(viewPort*projection*v2m(worldCoords[j]));
-			textCoords[j] = mesh.texts_[tex[j]];
+			screenCoords[j] = m2v(viewPort*v2m(worldCoords[j]));
+			
 			
 		}
 
 		Vec3f n = cross(worldCoords[2] - worldCoords[0], worldCoords[1] - worldCoords[0]);
 		n.normalize();
 		float intensity = n * light_dir;
-		if(intensity>0)
-			triangle(screenCoords,textCoords,zBuffer,buffer,texture,intensity);
+		if (intensity > 0) {
+			for(int j=0; j<3; j++)
+				textCoords[j] = mesh.uv(i,j);
+			triangle(screenCoords, textCoords, zBuffer, buffer, mesh, intensity);
+		}
+			
 		//setTexture(screenCoords, textCoords, image, texture);
 	}
 }
@@ -243,9 +245,7 @@ int main(int argc, char** argv) {
 
 	//TGAImage image(width, height, TGAImage::RGB);
 
-	TGAImage texture(width, height, TGAImage::RGB);
-	texture.read_tga_file("./testfile/african_head_diffuse.tga");
-	texture.flip_vertically();
+	mesh.loadTexture("./testfile/african_head_diffuse.tga");
 
 	//SDL2 Setting
 	bool quit = false;
@@ -273,7 +273,7 @@ int main(int argc, char** argv) {
 		//Allows surface editing
 		SDL_LockSurface(surface);
 
-		rasterize(mesh, pixels, texture, white, zbuffer);
+		rasterize(mesh, pixels,  white, zbuffer);
 
 		//픽셀버퍼를 surface 로 복사 4를 곱하는 이유는 픽셀버퍼는 색상포맷의 영향을 받음
 		memcpy(surface->pixels, pixels->buffer, pixels->mHeight*pixels->mWidth * 4);

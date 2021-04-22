@@ -4,6 +4,18 @@ Mesh::~Mesh()
 {
 }
 
+void Mesh::loadTexture(const char* filename)
+{
+	textureMap.read_tga_file(filename);
+	textureMap.flip_vertically();
+}
+
+Vec3f Mesh::uv(int index, int nvert)
+{
+	Vec3f uv = texts_[textureIndices[index][nvert]];
+	return Vec3f(uv.x*textureMap.get_width(), uv.y*textureMap.get_height(), uv.z);
+}
+
 
 Mesh & OBJ::buildMeshFromFile(Mesh & mesh, std::string &filename)
 {

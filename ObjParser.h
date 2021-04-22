@@ -3,6 +3,7 @@
 #pragma once
 
 #include <vector>
+#include "tgaimage.h"
 #include "geometry.h"
 class Mesh {
 public:
@@ -14,13 +15,15 @@ public:
 	std::vector<Vec3i> vertexIndices;
 	std::vector<Vec3i> textureIndices;
 	std::vector<Vec3i> normalsIndices;
+
+	TGAImage textureMap; 
+	void loadTexture(const char* filename);
+	Vec3f uv(int index, int nvert);
 };
 
 #include <fstream>
 #include <sstream>
 namespace OBJ {
-
-
 	Mesh& buildMeshFromFile(Mesh& mesh, std::string &filename);
 	bool fileExist(std::string &filename);
 	void loadFileData(Mesh& mesh, std::ifstream &file);
